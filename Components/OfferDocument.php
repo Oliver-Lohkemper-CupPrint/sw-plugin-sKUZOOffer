@@ -448,14 +448,17 @@ class Shopware_Plugins_Backend_sKUZOOffer_Components_OfferDocument extends Shopw
         $billing[0]['payment'] = $offer->getPayment()->getDescription();
         $billing[0]['country'] = $billingCountry->getIsoName();
         $config = Shopware()->Plugins()->Backend()->sKUZOOffer()->Config();
-
+        $builder = Shopware()->Models()->createQueryBuilder();
+        $builder->select(o)->from('Shopware\CustomModels\Offer\Shipping', 'o')->where('o.offerId = :offerID');
+        $builder->setParameter('offerID', $offer->getId());
+        $shipping = $builder->getQuery()->getArrayResult();
         $user = array(
             "totalPriceWithoutTax"=>$totalPriceWithoutTax,
             "totalPriceWithTax"=>$totalPriceWithTax,
             "totalOriginalPriceWithoutTax"=>$totalOriginalPriceWithoutTax,
             "totalOriginalPriceWithTax"=>$totalOriginalPriceWithTax,
             "taxCost"=>$taxCost,
-            "shipping"=>$billing[0],
+            "shipping"=>$shipping[0],
             "billing"=>$billing[0],
             "additional"=>array("countryShipping"=>$shippingCountry->getName(),"country"=>$billingCountry->getName(),"documentFormat"=>$this->_config['documentFormat'],"zeroShipping"=>$config->showShippingTaxEveryTime,"customerShowTax"=>$customerShowTax)
         );
