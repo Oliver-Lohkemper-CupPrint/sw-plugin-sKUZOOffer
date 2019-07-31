@@ -290,7 +290,10 @@ class Shopware_Plugins_Backend_sKUZOOffer_Components_OfferDocument extends Shopw
 
         $translationPayment = $this->translationComponent->read($language, 'config_payment', 1);
         $translationDispatch = $this->translationComponent->read($language, 'config_dispatch', 1);
-
+        // CUPPRINT STUFF - 05.07.2019 ------------------------------------------------------
+        $translationUnit = $this->translationComponent->read($language, 'config_units', 1);
+        // CUPPRINT STUFF - 05.07.2019 ------------------------------------------------------
+        
         if (isset($translationPayment[$paymentId])) {
             if (isset($translationPayment[$paymentId]['description'])) {
                 $this->_offer->getPayment()->setDescription($translationPayment[$paymentId]['description']);
@@ -361,22 +364,17 @@ class Shopware_Plugins_Backend_sKUZOOffer_Components_OfferDocument extends Shopw
             /*if(!$variant){
                 throw new Exception('Article is not exist');
             }*/
-            if($variant) {
-                //translate article name for different subshops
-				if(Shopware()->Plugins()->Backend()->sKUZOOffer()->assertMinimumVersion("5")){
-                	$translationArticle = $this->translationComponent->read($language, 'article', $variant->getArticleId());
+            if( $variant ) {
+                // translate article name for different subshops
+				if( Shopware()->Plugins()->Backend()->sKUZOOffer()->assertMinimumVersion("5") ) {
+                    $translationArticle        = $this->translationComponent->read( $language, 'article', $variant->getArticleId() );
+                    $translationArticleVariant = $this->translationComponent->read( $language, 'variant', $variant->getId() );
 				} else {
-	                $translationArticle = $this->translationComponent->read($language, 'article', $variant->getArticle()->getId());
-				}
-                if($translationArticle && isset($translationArticle['name']) && !empty($translationArticle['name'])){
-                    $position['articleName'] = $translationArticle['name'];
+	                $translationArticle = $this->translationComponent->read( $language, 'article', $variant->getArticle()->getId() );
                 }
-
-                if ($variant->getUnit()) {
-                    $variantUnitArray = Shopware()->Models()->toArray($variant->getUnit());
-                    $position['unitName'] = $variantUnitArray['name'];
+                if( $variant->getUnit() ) {
+                    $position['Unit'] = $translationUnit[ $variant->getUnit()->getId() ]['unit'];
                 }
-
                 $position['referenceUnit'] = $variant->getReferenceUnit();
                 $position['purchaseUnit'] = $variant->getPurchaseUnit();
                 $position['packUnit'] = $variant->getPackUnit();
@@ -386,6 +384,59 @@ class Shopware_Plugins_Backend_sKUZOOffer_Components_OfferDocument extends Shopw
                 if ($variant->getAttribute()) {
                     $position['attribute'] = Shopware()->Models()->toArray($variant->getAttribute());
                 }
+
+                // Baisc Article Translation
+                if( $translationArticle ) {
+                    foreach( $translationArticle AS $key => $value ) {
+                        if( substr( $key, 0, 12 ) == '__attribute_' ) {
+                            $realKey = substr( $key, 12 );
+                            $realKeyPart = strtok( $realKey, '_' );
+                            
+                            while( $temp = strtok( '_' ) ) {
+                                $realKeyPart.= ucfirst( $temp );
+                            }
+                            
+                            $position['attribute'][ $realKeyPart ] = $value;
+                             
+                        } else if( 'packUnit' == $key ) {
+                            $position['packUnit'] = $value;
+                        }
+                    }
+                    
+                    if( isset($translationArticle['name']) && !empty($translationArticle['name'])) {
+                        $position['articleName'] = $translationArticle['name'];
+                    }
+                }
+                
+                // Variant Translation
+                if( $translationArticleVariant ) {
+                    foreach( $translationArticleVariant AS $key => $value ) {
+                        if( substr( $key, 0, 12 ) == '__attribute_' ) {
+                            $realKey = substr( $key, 12 );
+                            $realKeyPart = strtok( $realKey, '_' );
+                            
+                            while( $temp = strtok( '_' ) ) {
+                                $realKeyPart.= ucfirst( $temp );
+                            }
+
+                            $position['attribute'][ $realKeyPart ] = $value;
+
+                        } else if( 'packUnit' == $key ) {
+                            $position['packUnit'] = $value;
+                        }
+                    }
+
+                    if( isset($translationArticleVariant['name']) && !empty($translationArticleVariant['name'])) {
+                        $position['articleName'] = $translationArticleVariant['name'];
+                    }
+                }
+
+                if( $translationArticle ) {
+                    if( isset($translationArticle['packUnit']) && !empty($translationArticle['packUnit'])) {
+                        $position['packUnit'] = $translationArticle['packUnit'];
+                    }
+                }
+
             }
             foreach ($Taxs as $tax) {
                 if($position['taxRate']== $tax->getTax()){
