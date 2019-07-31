@@ -350,10 +350,10 @@ class Shopware_Plugins_Backend_sKUZOOffer_Components_OfferDocument extends Shopw
         foreach ($positions as &$position) {
             $position = $position->toArray($position);
             $position['meta'] = $articleModule->sGetPromotionById('fix', 0, (int) $position['articleId']);
-            $position['price'] = $position['price'] * $currency['factor']; //multiplied with factory for currency change
+            $position['price'] = round( $position['price'] * $currency['factor'], 2 ); // multiplied with factory for currency change
             $totalPriceWithoutTax += $position['price'] * $position['quantity'];
             $totalPriceWithTax += ($position['price'] * $position['quantity']) + $this->getTaxAmount($position['price'] * $position['quantity'], $position['taxRate']);
-            $position['originalPrice'] = $position['originalPrice'] * $currency['factor'];
+            $position['originalPrice'] = round( $position['originalPrice'] * $currency['factor'], 2 );
             $totalOriginalPriceWithoutTax += $position['originalPrice'] * $position['quantity'];
             $totalOriginalPriceWithTax += ($position['originalPrice'] * $position['quantity']) + $this->getTaxAmount($position['originalPrice'] * $position['quantity'], $position['taxRate']);
             //get packUnit, purchaseUnit, referenceUnit and unitName of variant
@@ -393,11 +393,6 @@ class Shopware_Plugins_Backend_sKUZOOffer_Components_OfferDocument extends Shopw
                     $taxCost[(string)$tax->getTax()] = $taxCost[(string)$tax->getTax()] + $positionTax;
                     $totalTax = $totalTax + $positionTax;
                 }
-            }
-            //if not net prices show bruto prices
-            if($customerShowTax) {
-                $position['originalPrice'] += $this->getTaxAmount($position['originalPrice'], $position['taxRate']);
-                $position['price'] += $this->getTaxAmount($position['price'], $position['taxRate']);
             }
 
             if(isset($position['swagCustomProductsConfigurationHash']) && !empty($position['swagCustomProductsConfigurationHash'])) {
