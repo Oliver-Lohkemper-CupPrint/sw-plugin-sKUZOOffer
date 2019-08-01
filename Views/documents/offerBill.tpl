@@ -48,6 +48,11 @@ td.name {
 	{$Containers.Td_Name.style}
 }
 
+td.units {
+    white-space: nowrap;
+    word-break: keep-all;
+}
+
 td.line {
 	{$Containers.Td_Line.style}
 }
@@ -124,22 +129,22 @@ td.head  {
 	<tbody valign="top">
 	<tr>
 		{block name="document_index_table_head_pos"}
-			<td align="left" width="5%" class="head">
+			<td align="left" width="3%" class="head">
 				<strong>{s name="DocumentIndHeadPositionIndex"}NO.{/s}</strong>
 			</td>
 		{/block}
 		{block name="document_index_table_head_nr"}
-			<td align="left" width="10%" class="head">
+			<td align="left" width="14%" class="head">
 				<strong>{s name="DocumentIndHeadArticleNumber"}Art-No.{/s}</strong>
 			</td>
 		{/block}
 		{block name="document_index_table_head_name"}
-			<td align="left" width="40%" class="head">
+			<td align="left" width="48%" class="head">
 				<strong>{s name="DocumentIndHeadArticleName"}Article Name{/s}</strong>
 			</td>
 		{/block}
 		{block name="document_index_table_head_quantity"}
-			<td align="right" width="5%" class="head">
+			<td align="right" width="7%" class="head">
 				<strong>{s name="DocumentIndHeadQnty"}Qnty.{/s}</strong>
 			</td>
 		{/block}
@@ -187,9 +192,10 @@ td.head  {
 		{block name="document_index_table_name"}
 			<td align="left" width="43%" valign="top">
 			{if $position.name == 'Versandkosten'}
-				{s name="DocumentIndexPositionNameShippingCosts"}{$position.articleName}{/s}
+				<strong>{s name="DocumentIndexPositionNameShippingCosts"}{$position.articleName}{/s}</strong>
 			{else}
-				{assign var=articleName value=$position.articleName|nl2br}
+				{assign var=articleName value=$position.articleName|replace:"[totalUnit]":"{$position.totalUnit}"|replace:"[Unit]":"{$position.Unit}"|nl2br}
+				{assign var=articleDesc value=$position.attribute.cpQuotation|replace:"[totalUnit]":"{$position.totalUnit}"|replace:"[Unit]":"{$position.Unit}"}
 				{if $position.customMode == 2}&nbsp;&nbsp;{assign var=articleName value=$articleName|cat:":"}{/if}
                 {if $position.customMode == 3}&nbsp;&nbsp;&nbsp;&nbsp;<span style="font-style: italic">{/if}
 				{$articleName}
@@ -198,7 +204,7 @@ td.head  {
 			</td>
 		{/block}
 		{block name="document_index_table_quantity"}
-			<td align="right" width="10%" valign="top">
+			<td align="right" width="5%" valign="top">
 				{$position.quantity} {$position.packUnit}
                 {if $position.name}
                 ({$position.totalUnit} {$position.unitName})
@@ -212,7 +218,11 @@ td.head  {
 		{block name="document_index_table_tax"}
 			{if $Document.netto != true}
 				<td align="right" width="6%" valign="top">
+				{if ($position.price*$position.quantity) == 0 || $position.articleNumber == ''}
+					&nbsp;
+				{else}
 					{$position.taxRate} %
+				{/if}
 				</td>
 			{/if}
 		{/block}
@@ -227,17 +237,33 @@ td.head  {
 		{block name="document_index_table_price"}
 			{if $Document.netto != true && $Document.nettoPositions != true}
 			    <td align="right" width="10%" valign="top">
-					{$position.price|currency}
+					{if ( $position.articleNumber == '33333' || ( $position.articleNumber == '999999' || $position.articleNumber == '' ) && $position.price*$position.quantity == 0 ) }
+						&nbsp;
+					{else}
+						{$position.price|currency}
+					{/if}
 				</td>
 			    <td align="right" width="14%" valign="top">
-			    	{($position.price*$position.quantity)|currency}
+			    	{if ( $position.articleNumber == '999999' || $position.articleNumber == '' ) && $position.price*$position.quantity == 0 }
+						&nbsp;
+					{else}
+						{($position.price*$position.quantity)|currency}
+					{/if}
 				</td>
 			{else}
 				<td align="right" width="10%" valign="top">
-					{$position.price|currency}
+					{if ( $position.articleNumber == '33333' || ( $position.articleNumber == '999999' || $position.articleNumber == '' ) && $position.price*$position.quantity == 0 ) }
+						&nbsp;
+					{else}
+						{$position.price|currency}
+					{/if}
 				</td>
 			    <td align="right" width="14%" valign="top">
-			    	{$position.price|currency}
+			    	{if ( $position.articleNumber == '999999' || $position.articleNumber == '' ) && $position.price*$position.quantity == 0 }
+						&nbsp;
+					{else}
+						{($position.price*$position.quantity)|currency}
+					{/if}
 				</td>
 			{/if}
 		{/block}
@@ -331,15 +357,19 @@ td.head  {
                     {/if}
 
 				{if $User.additional.customerShowTax}
-					<tr>
-						<td align="right" class="head"><b>{s name="DocumentIndexTotalPrice"}Total Price{/s}</b></td>
-						<td align="right" class="head"><b>{($Offer.discountAmount+$Offer.invoiceShipping)|currency}</b></td>
-					</tr>
+                    {if $isTax == 1}
+						<tr>
+							<td align="right" class="head"><b>{s name="DocumentIndexTotalPrice"}Total Price{/s}</b></td>
+							<td align="right" class="head"><b>{($Offer.totalPriceWithTax+$Offer.invoiceShipping)|currency}</b></td>
+						</tr>
+					{/if}
 				{else}
-					<tr>
-						<td align="right" width="100px" class="head">{s name="DocumentIndexTotalOffer"}Offer Price:{/s}</td>
-						<td align="right" width="200px" class="head">{$User.totalPriceWithoutTax|currency}</td>
-					</tr>
+                    {if $isTax == 1}
+						<tr>
+							<td align="right" width="100px" class="head">{s name="DocumentIndexTotalOffer"}Offer Price:{/s}</td>
+							<td align="right" width="200px" class="head">{$User.totalPriceWithoutTax|currency}</td>
+						</tr>
+					{/if}
 				{/if}
 
 
@@ -357,34 +387,24 @@ td.head  {
 				{/foreach}
 
 
-                {*{if $User.$address.shippingTax}
+                {if $User.$address.shippingTax}
                     <tr>
                         <td align="right" class="head">{s name="DocumentIndexShippingTaxes"}Shipping: {$User.$address.shippingTax} % :{/s}</td>
                         <td align="right" class="head">{$Offer.invoiceShipping|currency}</td>
                     </tr>
-                {/if}*}
-			  {*{if $User.$address.shippingTax}
-				  <tr>
-				    <td align="right"><b>{s name="DocumentIndexTotalPrice"}Total Price{/s}</b></td>
-				    <td align="right"><b>{$Offer.invoiceAmountNet|currency}</b></td>
-				  </tr>
-			  {else}
-			 	  <tr>
-				    <td align="right"><b>{s name="DocumentIndexTotalPrice"}Total Price{/s}</b></td>
-				    <td align="right"><b>{$Offer.discountAmount|currency}</b></td>
-				  </tr>
-			  {/if}*}
-                    {if $User.additional.customerShowTax}
-						<tr>
-							<td align="right" width="100px">{s name="DocumentIndexTotalOffer"}Offer Price:{/s}</td>
-							<td align="right" width="200px">{$User.totalPriceWithoutTax|currency}</td>
-						</tr>
-					{else}
-						<tr>
-							<td align="right"><b>{s name="DocumentIndexTotalPrice"}Total Price{/s}</b></td>
-							<td align="right"><b>{($Offer.discountAmount+$Offer.invoiceShipping)|currency}</b></td>
-						</tr>
-					{/if}
+                {/if}
+
+				{if $User.additional.customerShowTax}
+					<tr>
+						<td align="right" width="100px">{s name="DocumentIndexTotalOffer"}Offer Price:{/s}</td>
+						<td align="right" width="200px">{$User.totalPriceWithoutTax|currency}</td>
+					</tr>
+				{else}
+					<tr>
+						<td align="right"><b>{s name="DocumentIndexTotalPrice"}Total Price{/s}</b></td>
+						<td align="right"><b>{($Offer.invoiceAmount+$Offer.invoiceShipping)|currency}</b></td>
+					</tr>
+				{/if}
 			  </tbody>
 			  </table>
 			</div>
