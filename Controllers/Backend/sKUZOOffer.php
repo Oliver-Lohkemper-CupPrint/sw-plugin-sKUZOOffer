@@ -103,10 +103,10 @@ class Shopware_Controllers_Backend_sKUZOOffer extends Shopware_Controllers_Backe
 
         foreach ($shops as $key => &$shop) {
             if ($shop['mainId'] == NULL) {
-                $shop['name'] = $shop['name'] . " " . $shop['locale']['language'];
+                $shop['name'] = $shop['name'] . " " . $shop['title'];
             }else{
                 $mainShop = Shopware()->Models()->getRepository('Shopware\Models\Shop\Shop')->findOneBy(array('id' => $shop['mainId']));
-                $shop['name'] = $mainShop->getName() . " " . $shop['locale']['language'];
+                $shop['name'] = $mainShop->getName() . " " . $shop['title'];
             }
         }
 
