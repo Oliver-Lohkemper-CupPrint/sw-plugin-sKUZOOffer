@@ -977,7 +977,7 @@ class Shopware_Controllers_Backend_sKUZOOffer extends Shopware_Controllers_Backe
 
         $data = $paginator->getIterator()->getArrayCopy();
         if(!empty($data)) {
-            $offers = $this->processOffersData($data);
+            $offers = $this->processOffersData($data, false);
         }
 
         // sends the out put to the view of the HBox
@@ -988,7 +988,7 @@ class Shopware_Controllers_Backend_sKUZOOffer extends Shopware_Controllers_Backe
         ));
     }
 
-    public function processOffersData($data){
+    public function processOffersData($data, $details = true){
         foreach ($data as $key =>$offer) {
             if($offer['shopId']){
                 $shop = Shopware()->Models()->getRepository('Shopware\Models\Shop\Shop')->findOneBy(array(
@@ -1001,53 +1001,56 @@ class Shopware_Controllers_Backend_sKUZOOffer extends Shopware_Controllers_Backe
             $data[$key]['discountAmount'] = $offer['discountAmount'] * $currency['factor'];
             $data[$key]['invoiceShipping'] = $offer['invoiceShipping'] * $currency['factor'];
             $data[$key]['currency'] = $currency['currency'];
-            foreach ($offer["details"] as $detailKey => &$offerDetail) {
-                $articleRepository = Shopware()->Models()->getRepository('Shopware\Models\Article\Detail');
-                $articleDetail = $articleRepository->findOneBy(array('number' => $offerDetail["articleNumber"]));
-                if ($articleDetail instanceof \Shopware\Models\Article\Detail) {
-                    $data[$key]['details'][$detailKey]['inStock'] = $articleDetail->getInStock();
-					if(Shopware()->Plugins()->Backend()->sKUZOOffer()->assertMinimumVersion("5")){
-                    	$data[$key]['details'][$detailKey]['articleId'] = $articleDetail->getarticleId();
-					} else {
-	                    $data[$key]['details'][$detailKey]['articleId'] = $articleDetail->getArticle()->getId();
-					}
-                    //purchase price
-                    $articlePrice = $articleDetail->getPrices();
 
-                    if($offerDetail['quantity'] && count($articlePrice)>1){
-                        foreach ($articlePrice as $offer_key => $aPrice) {
-                            if($articlePrice instanceof \Shopware\Models\Article\Price) {
-                                if(($aPrice->getFrom() <= $offerDetail['quantity'] && ($aPrice->getTO() >= $offerDetail['quantity'] || $aPrice->getTO() == 'beliebig')) && $aPrice->getCustomerGroup()
-                                        ->getKey() == $data[0]['customer']['groupKey']
-                                ) {
-                                    $articlePrice = $articlePrice[$offer_key];
-                                    break;
+            if( $details == true ) {
+                foreach ($offer["details"] as $detailKey => &$offerDetail) {
+                    $articleRepository = Shopware()->Models()->getRepository('Shopware\Models\Article\Detail');
+                    $articleDetail = $articleRepository->findOneBy(array('number' => $offerDetail["articleNumber"]));
+                    if ($articleDetail instanceof \Shopware\Models\Article\Detail) {
+                        $data[$key]['details'][$detailKey]['inStock'] = $articleDetail->getInStock();
+                        if(Shopware()->Plugins()->Backend()->sKUZOOffer()->assertMinimumVersion("5")){
+                            $data[$key]['details'][$detailKey]['articleId'] = $articleDetail->getarticleId();
+                        } else {
+                            $data[$key]['details'][$detailKey]['articleId'] = $articleDetail->getArticle()->getId();
+                        }
+                        //purchase price
+                        $articlePrice = $articleDetail->getPrices();
+
+                        if($offerDetail['quantity'] && count($articlePrice)>1){
+                            foreach ($articlePrice as $offer_key => $aPrice) {
+                                if($articlePrice instanceof \Shopware\Models\Article\Price) {
+                                    if(($aPrice->getFrom() <= $offerDetail['quantity'] && ($aPrice->getTO() >= $offerDetail['quantity'] || $aPrice->getTO() == 'beliebig')) && $aPrice->getCustomerGroup()
+                                            ->getKey() == $data[0]['customer']['groupKey']
+                                    ) {
+                                        $articlePrice = $articlePrice[$offer_key];
+                                        break;
+                                    }
                                 }
                             }
+                        }else{
+                            $articlePrice = $articlePrice[0];
                         }
-                    }else{
-                        $articlePrice = $articlePrice[0];
-                    }
 
-                    if($articlePrice){
-                        $purchasePrice = 0;
-                        if(Shopware()->Plugins()->Backend()->sKUZOOffer()->assertMinimumVersion("5.2")){
-                            $purchasePrice = $articleDetail->getPurchasePrice();
+                        if($articlePrice){
+                            $purchasePrice = 0;
+                            if(Shopware()->Plugins()->Backend()->sKUZOOffer()->assertMinimumVersion("5.2")){
+                                $purchasePrice = $articleDetail->getPurchasePrice();
+                            }
+                            else {
+                                // $purchasePrice = $articlePrice->getBasePrice();
+                            }
+                            if($offerDetail['taxRate'])
+                                $data[$key]['details'][$detailKey]['purchasePrice'] = $this->calculatePrice($purchasePrice, $offerDetail['taxRate'])*$currency['factor'];
+                            else
+                                $data[$key]['details'][$detailKey]['purchasePrice'] = $purchasePrice * $currency['factor'];
                         }
-                        else {
-//                            $purchasePrice = $articlePrice->getBasePrice();
-                        }
-                        if($offerDetail['taxRate'])
-                            $data[$key]['details'][$detailKey]['purchasePrice'] = $this->calculatePrice($purchasePrice, $offerDetail['taxRate'])*$currency['factor'];
-                        else
-                            $data[$key]['details'][$detailKey]['purchasePrice'] = $purchasePrice * $currency['factor'];
                     }
+                    $data[$key]['details'][$detailKey]['originalNetPrice'] = $offerDetail['originalPrice'] * $currency['factor'];
+                    $data[$key]['details'][$detailKey]['originalPrice'] = $this->includeTax($offerDetail['originalPrice'], $offerDetail['taxRate']) * $currency['factor'];
+                    $data[$key]['details'][$detailKey]['price'] = $this->includeTax($offerDetail['price'], $offerDetail['taxRate']) * $currency['factor'];
+                    $data[$key]['details'][$detailKey]['currency'] = $currency['currency'];
+                    //$data[$key]['details'][$detailKey]['currency'] = $offer['currency'];
                 }
-                $data[$key]['details'][$detailKey]['originalNetPrice'] = $offerDetail['originalPrice'] * $currency['factor'];
-                $data[$key]['details'][$detailKey]['originalPrice'] = $this->includeTax($offerDetail['originalPrice'], $offerDetail['taxRate']) * $currency['factor'];
-                $data[$key]['details'][$detailKey]['price'] = $this->includeTax($offerDetail['price'], $offerDetail['taxRate']) * $currency['factor'];
-                $data[$key]['details'][$detailKey]['currency'] = $currency['currency'];
-                //$data[$key]['details'][$detailKey]['currency'] = $offer['currency'];
             }
             if($offer['orderId']){
                 $order = $this->getManager()->find(
