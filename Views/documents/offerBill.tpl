@@ -356,6 +356,13 @@ td.head  {
                         </tr>
                     {/if}
 
+				{assign var="isTax" value=0}
+			 	{foreach from=$User.taxCost item=taxCost key=key}
+				  {if $taxCost}
+					{assign var="isTax" value=1}
+				  {/if}
+				{/foreach}
+
 				{if $User.additional.customerShowTax}
                     {if $isTax == 1}
 						<tr>
